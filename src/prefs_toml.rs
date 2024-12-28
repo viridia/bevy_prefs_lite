@@ -149,8 +149,17 @@ impl PreferencesGroupMut<'_> {
         toml::Value::try_into(value).ok()
     }
 
-    /// Set a key in the preferences group to a serializable value.
+    /// Set a key in the preferences group to a serializable value, and mark the file as changed.
     pub fn set<S: Serialize>(&mut self, key: &str, value: S) {
+        let value = toml::Value::try_from(value).unwrap();
+        self.table.insert(key.to_owned(), value);
+        self.changed
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    /// Convert `value` into a TOML value. If it is different than the current value, set the key
+    /// in the preferences group to the new value, and mark the file as changed.
+    pub fn set_if_changed<S: Serialize>(&mut self, key: &str, value: S) {
         let value = toml::Value::try_from(value).unwrap();
         match self.table.get(key) {
             Some(v) if v == &value => (),

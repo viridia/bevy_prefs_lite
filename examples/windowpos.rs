@@ -89,12 +89,12 @@ fn store_window_settings(
     let mut window_prefs = app_prefs.get_group_mut("window").unwrap();
 
     // Window fullscreen mode
-    window_prefs.set("fullscreen", window.mode != WindowMode::Windowed);
+    window_prefs.set_if_changed("fullscreen", window.mode != WindowMode::Windowed);
 
     // Window position
     match window.position {
         WindowPosition::At(pos) => {
-            window_prefs.set("position", pos);
+            window_prefs.set_if_changed("position", pos);
         }
         _ => {
             window_prefs.remove("position");
@@ -102,7 +102,7 @@ fn store_window_settings(
     };
 
     // Window size
-    window_prefs.set(
+    window_prefs.set_if_changed(
         "size",
         Vec2::new(window.resolution.width(), window.resolution.height()),
     );

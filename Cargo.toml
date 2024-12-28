@@ -1,0 +1,14 @@
+[package]
+name = "bevy_simple_prefs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = { version = "0.15.0", default-features = false }
+
+[dev-dependencies]
+bevy = { version = "0.15.0", default-features = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+directories = { version = "5.0.1" }
+toml = { version = "0.8.19" }

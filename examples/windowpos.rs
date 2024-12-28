@@ -64,17 +64,17 @@ pub fn update_window_settings(
 fn load_window_settings(prefs: &mut Preferences, window: &mut Window) {
     if let Some(app_prefs) = prefs.get("prefs") {
         if let Some(window_prefs) = app_prefs.get_group("window") {
-            if let Some(fullscreen) = window_prefs.get_bool("fullscreen") {
+            if let Some(fullscreen) = window_prefs.get::<bool>("fullscreen") {
                 window.mode = if fullscreen {
                     WindowMode::SizedFullscreen(MonitorSelection::Current)
                 } else {
                     WindowMode::Windowed
                 };
             }
-            if let Some(pos) = window_prefs.get_ivec2("position") {
+            if let Some(pos) = window_prefs.get::<IVec2>("position") {
                 window.position = WindowPosition::new(pos);
             }
-            if let Some(size) = window_prefs.get_vec2("size") {
+            if let Some(size) = window_prefs.get::<Vec2>("size") {
                 window.resolution = (size.x, size.y).into();
             }
         }
@@ -89,12 +89,12 @@ fn store_window_settings(
     let mut window_prefs = app_prefs.get_group_mut("window").unwrap();
 
     // Window fullscreen mode
-    window_prefs.set_bool("fullscreen", window.mode != WindowMode::Windowed);
+    window_prefs.set("fullscreen", window.mode != WindowMode::Windowed);
 
     // Window position
     match window.position {
         WindowPosition::At(pos) => {
-            window_prefs.set_ivec2("position", pos);
+            window_prefs.set("position", pos);
         }
         _ => {
             window_prefs.remove("position");
@@ -102,8 +102,10 @@ fn store_window_settings(
     };
 
     // Window size
-    let size = Vec2::new(window.resolution.width(), window.resolution.height());
-    window_prefs.set_vec2("size", size);
+    window_prefs.set(
+        "size",
+        Vec2::new(window.resolution.width(), window.resolution.height()),
+    );
 
     commands.queue(StartAutosaveTimer);
 }

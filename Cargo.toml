@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.15.0", default-features = false }
+serde = "1.0.217"
 
 [dev-dependencies]
 bevy = { version = "0.15.0", default-features = true }

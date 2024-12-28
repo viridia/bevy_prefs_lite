@@ -32,7 +32,7 @@ fn auto_save_preferences(mut timer: ResMut<AutosaveTimer>, time: Res<Time>, mut 
     if timer.0 > 0.0 {
         timer.0 = (timer.0 - time.delta_secs()).max(0.0);
         if timer.0 <= 0.0 {
-            cmd.queue(SavePreferences::Always);
+            cmd.queue(SavePreferences::IfChanged);
         }
     }
 }

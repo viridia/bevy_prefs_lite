@@ -72,6 +72,27 @@ Because this library supports "simple" preferences, some things have been intent
 
 ## Usage
 
+### Preferences Structure
+
+The `Preferences` object represents the container for preferences files. Within this container
+you can create individual `PreferenceFile` objects, each one backed by a separate file such as
+"prefs.toml" (on the web, each file is stored as a separate key item in `LocalStorage`).
+
+Each preferences file contains one or more `PreferenceGroups` which represents a section within
+the file. Groups can also contain other groups.
+
+Finally, groups have individual properties which are accessed via `get` and `set` methods.
+
+In the examples below, the `app.toml` file would have a structure like this:
+
+```toml
+[window]
+size = [
+    800,
+    600
+]
+```
+
 ### Initializing the preferences store and loading preferences
 
 Normally the `Preferences` object is initialized during app initialization. You create a new

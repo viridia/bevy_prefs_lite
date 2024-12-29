@@ -31,7 +31,8 @@ Preferences are _NOT_:
 
 ## Supported Features
 
-- Preferences are serialized to TOML or (planned) JSON format.
+- Supports both Desktop and Web (WASM) platforms.
+- Preferences are serialized to TOML or JSON format.
 - Preferences are saved in standard OS locations. Config directories are created if they do
   not already exist. The settings directory name is configurable.
 - File-corruption-resistant: the framework will save the settings to a temp file, close the file,
@@ -41,36 +42,44 @@ Preferences are _NOT_:
   splitter bar, changes at high frequency when dragged. The library allows you to mark preferences
   as "changed", which will save out preferences after a delay of one second.
 - Various configurable options for saving preferences:
-  - Fully-automatic: the preferences system will watch for changes to the preference resources,
-    and queue a deferred save action.
   - Mark changed: you can explicitly mark the preferences as "changed", which will trigger a
     deferred save.
   - Explicit synchronous flush: you can issue a `Command` which immediately and synchronously
     writes out the settings file.
 
-## Planned features
+## Platform support
 
-- Web support. Currently the library uses filesystem operations, but it could be extended to
-  support browser local storage (possibly using JSON format instead of TOML since that is
-  more web-idiomatic).
+When compiling for WASM targets, preferences are stored in browser `LocalStorage` in serialized
+JSON format.
+
+When compiling for desktop, preferences are stored as TOML files in the standard OS locations
+for user preferences.
 
 ## Non-goals
 
-Because this library supports "basic" preferences, some things have been intentionally left out:
+Because this library supports "simple" preferences, some things have been intentionally left out:
 
 - Serialization of exotic types - we don't support serialization of every possible Rust type.
-- Choice of config file formats.
+  Generally, if a type is serializable via `serde` to JSON or TOML it will work.
+- Choice of config file formats. The reason JSON is used in WASM is because it is more idiomatic
+  in web apps; similarly, TOML is a common choice for desktop configuration files, and is similar
+  to older formats such as ".ini" files.
 - Hot loading / settings file change detection. Because the only program that ever writes to the
   settings file is the game itself, there's no need to be notified when the file has changed
   (and it would significantly complicate the design).
+- Local overrides such as project or workspace-specific preferences. The vast majority of apps
+  don't need this functionality, which would make the API considerably more complex.
 
 ## Usage
 
 ### Initializing the preferences store and loading preferences
 
 Normally the `Preferences` object is initialized during app initialization. You create a new
-`Preferences` object, passing it a unique string which identifies your application. The
-"reverse domain name" convention is an easy way to ensure global uniqueness:
+`Preferences` object, passing it a unique string which identifies your application. This string
+is ignored in WASM targets, but is used in desktop platforms to ensure that your preferences
+don't overwrite those of other apps.
+
+The "reverse domain name" convention is an easy way to ensure global uniqueness:
 
 ```rust
 // Configure preferences directory
@@ -84,14 +93,15 @@ to individual preference files in your config directory such as `app.toml`:
 ```rust
 let app_prefs = preferences.get("app").unwrap();
 if let Some(window_group) = app_prefs.get_group("window") {
-    if let Some(window_size) = window_group.get_uvec2("size") {
+    if let Some(window_size) = window_group.get::<UVec2>("size") {
         // Configure window size
     }
 }
 ```
 
 The `Preferences` object is also an ECS Resource, so you can insert it into the game world. This
-makes it easy for other parts of the game code to load their preference settings.
+makes it easy for other parts of the game code to load their preference settings. For example,
+startup systems can inject preferences like any other resource.
 
 ```rust
 app.insert_resource(preferences);
@@ -104,7 +114,7 @@ To save preferences, you can use the `mut` versions of the preference methods:
 ```rust
 let mut app_prefs = preferences.get_mut("app").unwrap();
 let window_group = app_prefs.get_group_mut("window").unwrap();
-window_group.set_uvec2("size", UVec2::new(10, 10));
+window_group.set("size", UVec2::new(10, 10));
 ```
 
 The `mut` methods do several things:
@@ -121,7 +131,8 @@ save the changes to disk. To trigger a save, you can issue a `SavePreferences` c
 commands.queue(SavePreferences::IfChanged);
 ```
 
-This will cause any preference files to be saved if they are marked as changed.
+This will cause any preference files to be saved if they are marked as changed. It's up to you
+to decide when to save preferences, but they should be saved before the app exits.
 
 ### Autosaving
 

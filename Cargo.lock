@@ -1004,7 +1004,9 @@ dependencies = [
  "bevy",
  "directories",
  "serde",
+ "serde_json",
  "toml",
+ "web-sys",
 ]
 
 [[package]]

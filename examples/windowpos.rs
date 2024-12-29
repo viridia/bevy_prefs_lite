@@ -6,6 +6,7 @@ use bevy_simple_prefs::{AutosavePrefsPlugin, Preferences, PreferencesFile, Start
 
 /// Example that remembers window position and size.
 fn main() {
+    info!("Hello, world!");
     // Configure preferences directory
     let mut preferences = Preferences::new("org.viridia.windowpos");
 

@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// Load a preferences file from disk in TOML format.
-pub(crate) fn load_table(file: &PathBuf) -> Option<toml::Table> {
+pub(crate) fn load_toml_file(file: &PathBuf) -> Option<toml::Table> {
     if file.exists() && file.is_file() {
         let prefs_str = match fs::read_to_string(file) {
             Ok(prefs_str) => prefs_str,

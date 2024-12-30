@@ -878,6 +878,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_prefs_lite"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "directories",
+ "serde",
+ "serde_json",
+ "toml",
+ "web-sys",
+]
+
+[[package]]
 name = "bevy_ptr"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -995,18 +1007,6 @@ dependencies = [
  "derive_more",
  "serde",
  "uuid",
-]
-
-[[package]]
-name = "bevy_simple_prefs"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "directories",
- "serde",
- "serde_json",
- "toml",
- "web-sys",
 ]
 
 [[package]]

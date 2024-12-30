@@ -2,7 +2,7 @@ use bevy::{
     prelude::*,
     window::{PrimaryWindow, WindowMode, WindowResized},
 };
-use bevy_simple_prefs::{AutosavePrefsPlugin, Preferences, PreferencesFile, StartAutosaveTimer};
+use bevy_prefs_lite::{AutosavePrefsPlugin, Preferences, PreferencesFile, StartAutosaveTimer};
 
 /// Example that remembers window position and size.
 fn main() {

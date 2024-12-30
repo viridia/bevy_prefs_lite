@@ -1,5 +1,5 @@
 [package]
-name = "bevy_simple_prefs"
+name = "bevy_prefs_lite"
 version = "0.1.0"
 edition = "2021"
 

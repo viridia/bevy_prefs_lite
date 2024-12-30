@@ -1,4 +1,4 @@
-# bevy_simple_prefs
+# bevy_prefs_lite
 
 This crate provides basic preferences support for Bevy applications. The word "preferences"
 in this context is used to mean user settings that are (1) set while running the app, (2) persistent

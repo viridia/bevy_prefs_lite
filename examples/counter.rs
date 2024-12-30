@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_simple_prefs::{AutosavePrefsPlugin, Preferences, StartAutosaveTimer};
+use bevy_prefs_lite::{AutosavePrefsPlugin, Preferences, StartAutosaveTimer};
 
 /// Example that remembers window position and size.
 fn main() {

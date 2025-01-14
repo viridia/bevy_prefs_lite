@@ -2,6 +2,8 @@
 name = "bevy_prefs_lite"
 version = "0.1.0"
 edition = "2021"
+description = "A simple preferences system for Bevy"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 bevy = { version = "0.15.0", default-features = false }

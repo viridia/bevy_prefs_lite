@@ -355,7 +355,7 @@ mod tests {
         assert!(changed.load(std::sync::atomic::Ordering::Relaxed));
 
         changed.store(false, std::sync::atomic::Ordering::Relaxed);
-        group.set("key", true);
+        group.set_if_changed("key", true);
         assert!(group.get::<bool>("key").unwrap());
         assert!(!changed.load(std::sync::atomic::Ordering::Relaxed));
     }
@@ -477,11 +477,11 @@ mod tests {
         assert!(changed.load(std::sync::atomic::Ordering::Relaxed));
 
         changed.store(false, std::sync::atomic::Ordering::Relaxed);
-        group.set("key", Vec3::new(1.0, 2.0, 3.0));
+        group.set_if_changed("key", Vec3::new(1.0, 2.0, 3.0));
         assert_eq!(group.get::<Vec3>("key").unwrap(), Vec3::new(1.0, 2.0, 3.0));
         assert!(!changed.load(std::sync::atomic::Ordering::Relaxed));
 
-        group.set("key", Vec3::new(3.0, 2.0, 1.0));
+        group.set_if_changed("key", Vec3::new(3.0, 2.0, 1.0));
         assert_eq!(group.get::<Vec3>("key").unwrap(), Vec3::new(3.0, 2.0, 1.0));
         assert!(changed.load(std::sync::atomic::Ordering::Relaxed));
     }

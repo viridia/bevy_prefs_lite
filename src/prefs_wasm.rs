@@ -11,6 +11,7 @@ pub use crate::prefs_json::PreferencesFile;
 /// methods load the preferences into memory if they are not already loaded.
 #[derive(Resource)]
 pub struct Preferences {
+    app_name: String,
     files: HashMap<String, PreferencesFile>,
 }
 
@@ -24,9 +25,10 @@ impl Preferences {
     ///   "com.example.myapp".
     ///
     ///   This is only used on desktop platforms. On web platforms, the name is ignored.
-    pub fn new(_app_name: &str) -> Self {
+    pub fn new(app_name: &str) -> Self {
         // console::log_1("Preferences::new");
         Self {
+            app_name: app_name.to_owned(),
             files: HashMap::default(),
         }
     }
@@ -48,7 +50,9 @@ impl Preferences {
                     file.clear_changed();
 
                     let json_str = file.encode();
-                    storage.set_item(filename, &json_str).unwrap();
+                    storage
+                        .set_item(&self.storage_key(filename).as_str(), &json_str)
+                        .unwrap();
                 }
             }
         }
@@ -71,11 +75,12 @@ impl Preferences {
     ///   an empty `PreferencesFile` is returned.
     pub fn get<'a>(&'a mut self, filename: &str) -> Option<&'a mut PreferencesFile> {
         if let Ok(Some(storage)) = window().unwrap().local_storage() {
-            if self.files.contains_key(filename) {
-                return self.files.get_mut(filename);
+            let storage_key = self.storage_key(filename);
+            if self.files.contains_key(&storage_key) {
+                return self.files.get_mut(&storage_key);
             }
 
-            let Ok(Some(json_str)) = storage.get_item(filename) else {
+            let Ok(Some(json_str)) = storage.get_item(&storage_key) else {
                 return None;
             };
 
@@ -107,8 +112,9 @@ impl Preferences {
     ///   an empty `PreferencesFile` is returned.
     pub fn get_mut<'a>(&'a mut self, filename: &str) -> Option<&'a mut PreferencesFile> {
         if let Ok(Some(storage)) = window().unwrap().local_storage() {
+            let storage_key = self.storage_key(filename);
             Some(self.files.entry(filename.to_owned()).or_insert_with(|| {
-                if let Ok(Some(json_str)) = storage.get_item(filename) {
+                if let Ok(Some(json_str)) = storage.get_item(storage_key.as_str()) {
                     PreferencesFile::from_string(&json_str, filename)
                 } else {
                     PreferencesFile::default()
@@ -117,5 +123,11 @@ impl Preferences {
         } else {
             None
         }
+    }
+
+    /// Returns the storage key for a given filename. This consists of the app name combined
+    /// with the filename.
+    fn storage_key(&self, filename: &str) -> String {
+        format!("{}-{}", self.app_name, filename)
     }
 }

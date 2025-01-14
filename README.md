@@ -97,8 +97,7 @@ size = [
 
 Normally the `Preferences` object is initialized during app initialization. You create a new
 `Preferences` object, passing it a unique string which identifies your application. This string
-is ignored in WASM targets, but is used in desktop platforms to ensure that your preferences
-don't overwrite those of other apps.
+is used to ensure that your preferences don't overwrite those of other apps.
 
 The "reverse domain name" convention is an easy way to ensure global uniqueness:
 
@@ -106,6 +105,9 @@ The "reverse domain name" convention is an easy way to ensure global uniqueness:
 // Configure preferences directory
 let mut preferences = Preferences::new("com.mydomain.coolgame");
 ```
+
+In desktop targets, the app name is used to establish a preferences directory in the standard
+OS location for preferences.
 
 The preferences store will verify that the preferences directory exists, but won't load anything
 yet. To actually load preferences, you'll need to load a `PreferencesFile`, which corresponds
@@ -119,6 +121,11 @@ if let Some(window_group) = app_prefs.get_group("window") {
     }
 }
 ```
+
+So for example on Mac, the above code would look for a file in the location
+"$HOME/Library/Preferences/com.mydomain.coolgame/app.toml".
+
+In WASM, it would look for a local storage key named "com.mydomain.coolgame-app".
 
 The `Preferences` object is also an ECS Resource, so you can insert it into the game world. This
 makes it easy for other parts of the game code to load their preference settings. For example,

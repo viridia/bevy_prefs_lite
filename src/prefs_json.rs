@@ -11,7 +11,7 @@ pub struct PreferencesFile {
 }
 
 impl PreferencesFile {
-    /// Create a preferences file from a TOML table.
+    /// Create a preferences file from a JSON table.
     pub(crate) fn from_string(json_str: &str, storage_key: &str) -> Self {
         let Ok(root) = serde_json::from_str::<Map<String, JsonValue>>(json_str) else {
             warn!(
@@ -121,7 +121,7 @@ impl PreferencesGroupMut<'_> {
             .store(true, std::sync::atomic::Ordering::Relaxed);
     }
 
-    /// Convert `value` into a TOML value. If it is different than the current value, set the key
+    /// Convert `value` into a JSON value. If it is different than the current value, set the key
     /// in the preferences group to the new value, and mark the file as changed.
     pub fn set_if_changed<S: Serialize>(&mut self, key: &str, value: S) {
         let value = serde_json::to_value(value).unwrap();

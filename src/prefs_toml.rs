@@ -1,7 +1,7 @@
 use std::{fs, path::PathBuf, sync::atomic::AtomicBool};
 
 use bevy::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Serialize};
 
 /// Load a preferences file from disk in TOML format.
 pub(crate) fn load_toml_file(file: &PathBuf) -> Option<toml::Table> {
@@ -112,9 +112,9 @@ pub struct PreferencesGroupMut<'a> {
 impl PreferencesGroup<'_> {
     /// Get a key from the preferences group as a deserializable value, or `None` if the key does
     /// not exist or is not deserializable.
-    pub fn get<'de, D>(&self, key: &str) -> Option<D>
+    pub fn get<D>(&self, key: &str) -> Option<D>
     where
-        D: Deserialize<'de>,
+        D: DeserializeOwned,
     {
         let value = self.table.get(key)?.clone();
         toml::Value::try_into(value).ok()
@@ -141,9 +141,9 @@ impl PreferencesGroupMut<'_> {
 
     /// Get a key from the preferences group as a deserializable value, or `None` if the key does
     /// not exist or is not deserializable.
-    pub fn get<'de, D>(&self, key: &str) -> Option<D>
+    pub fn get<D>(&self, key: &str) -> Option<D>
     where
-        D: Deserialize<'de>,
+        D: DeserializeOwned,
     {
         let value = self.table.get(key)?.clone();
         toml::Value::try_into(value).ok()

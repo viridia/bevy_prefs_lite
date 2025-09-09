@@ -4,29 +4,44 @@ mod autosave;
 
 pub use autosave::{AutosavePrefsPlugin, StartAutosaveTimer};
 
-#[cfg(not(target_arch = "wasm32"))]
+mod prefs;
+
+mod prefs_json;
 mod prefs_toml;
 
-#[cfg(target_arch = "wasm32")]
-mod prefs_json;
-
 #[cfg(not(target_arch = "wasm32"))]
-mod prefs_fs;
+mod store_fs;
 
 #[cfg(target_arch = "wasm32")]
-mod prefs_wasm;
+mod store_wasm;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use prefs_toml::{PreferencesFile, PreferencesGroup, PreferencesGroupMut};
-
-#[cfg(target_arch = "wasm32")]
-pub use prefs_json::PreferencesFile;
-
-#[cfg(not(target_arch = "wasm32"))]
-pub use prefs_fs::Preferences;
+pub use store_fs::StoreFs;
 
 #[cfg(target_arch = "wasm32")]
 pub use prefs_wasm::Preferences;
+
+pub use crate::prefs::Preferences;
+
+#[cfg(target_arch = "wasm32")]
+mod format {
+    use crate::prefs_json;
+
+    pub type PreferencesFile = prefs_json::JsonPreferencesFile;
+    pub type PreferencesGroup<'a> = prefs_json::JsonPreferencesGroup<'a>;
+    pub type PreferencesGroupMut<'a> = prefs_json::JsonPreferencesGroupMut<'a>;
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+mod format {
+    use crate::prefs_toml;
+
+    pub type PreferencesFile = prefs_toml::TomlPreferencesFile;
+    pub type PreferencesGroup<'a> = prefs_toml::TomlPreferencesGroup<'a>;
+    pub type PreferencesGroupMut<'a> = prefs_toml::TomlPreferencesGroupMut<'a>;
+}
+
+pub use self::format::*;
 
 /// A Command which saves preferences to disk.
 #[derive(Default, PartialEq)]

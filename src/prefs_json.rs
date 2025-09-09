@@ -5,12 +5,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Represents a single preferences file containing multiple groups of settings.
 #[derive(Debug, Default)]
-pub struct PreferencesFile {
+pub struct JsonPreferencesFile {
     root: Map<String, JsonValue>,
     changed: AtomicBool,
 }
 
-impl PreferencesFile {
+impl JsonPreferencesFile {
     /// Create a preferences file from a JSON table.
     pub(crate) fn from_string(json_str: &str, storage_key: &str) -> Self {
         let Ok(root) = serde_json::from_str::<Map<String, JsonValue>>(json_str) else {
@@ -27,21 +27,21 @@ impl PreferencesFile {
     }
 
     /// Get a preferences group from the file, or `None` if the group does not exist.
-    pub fn get_group(&self, group: &str) -> Option<PreferencesGroup> {
+    pub fn get_group(&self, group: &str) -> Option<JsonPreferencesGroup> {
         self.root
             .get(group)
             .and_then(|v| v.as_object())
-            .map(|json| PreferencesGroup { json })
+            .map(|json| JsonPreferencesGroup { json })
     }
 
     /// Get a mutable reference to a preferences group from the file, creating it if it does not
     /// exist.
-    pub fn get_group_mut<'a>(&'a mut self, group: &str) -> Option<PreferencesGroupMut<'a>> {
+    pub fn get_group_mut<'a>(&'a mut self, group: &str) -> Option<JsonPreferencesGroupMut<'a>> {
         let entry = self
             .root
             .entry(group.to_owned())
             .or_insert_with(|| JsonValue::Object(Map::new()));
-        entry.as_object_mut().map(|json| PreferencesGroupMut {
+        entry.as_object_mut().map(|json| JsonPreferencesGroupMut {
             json,
             changed: &mut self.changed,
         })
@@ -64,37 +64,34 @@ impl PreferencesFile {
     }
 }
 
-pub struct PreferencesGroup<'a> {
+pub struct JsonPreferencesGroup<'a> {
     json: &'a Map<String, JsonValue>,
 }
 
-pub struct PreferencesGroupMut<'a> {
+pub struct JsonPreferencesGroupMut<'a> {
     json: &'a mut Map<String, JsonValue>,
     changed: &'a AtomicBool,
 }
 
-impl PreferencesGroup<'_> {
+impl JsonPreferencesGroup<'_> {
     /// Get a key from the preferences group as a deserializable value, or `None` if the key does
     /// not exist or is not deserializable.
-    pub fn get<D>(&self, key: &str) -> Option<D>
-    where
-        D: DeserializeOwned,
-    {
+    pub fn get<D: DeserializeOwned>(&self, key: &str) -> Option<D> {
         let value = self.json.get(key)?.clone();
         serde_json::from_value::<D>(value).ok()
     }
 
     /// Read a nested preferences group from the group, or `None` if the property does not exist or
     /// is not a table.
-    pub fn get_group(&self, key: &str) -> Option<PreferencesGroup> {
+    pub fn get_group(&self, key: &str) -> Option<JsonPreferencesGroup> {
         self.json
             .get(key)
             .and_then(|v| v.as_object())
-            .map(|json| PreferencesGroup { json })
+            .map(|json| JsonPreferencesGroup { json })
     }
 }
 
-impl PreferencesGroupMut<'_> {
+impl JsonPreferencesGroupMut<'_> {
     /// Delete a key from the preferences group.
     pub fn remove(&mut self, key: &str) {
         if self.json.remove(key).is_some() {
@@ -105,10 +102,7 @@ impl PreferencesGroupMut<'_> {
 
     /// Get a key from the preferences group as a deserializable value, or `None` if the key does
     /// not exist or is not deserializable.
-    pub fn get<D>(&self, key: &str) -> Option<D>
-    where
-        D: DeserializeOwned,
-    {
+    pub fn get<D: DeserializeOwned>(&self, key: &str) -> Option<D> {
         let value = self.json.get(key)?.clone();
         serde_json::from_value::<D>(value).ok()
     }
@@ -137,22 +131,22 @@ impl PreferencesGroupMut<'_> {
 
     /// Read a nested preferences group from the group, or `None` if the property does not exist or
     /// is not a table.
-    pub fn get_group(&self, key: &str) -> Option<PreferencesGroup> {
+    pub fn get_group(&self, key: &str) -> Option<JsonPreferencesGroup> {
         self.json
             .get(key)
             .and_then(|v| v.as_object())
-            .map(|json| PreferencesGroup { json })
+            .map(|json| JsonPreferencesGroup { json })
     }
 
     /// Get a mutable reference to a nested preferences group from the group, creating it if it
     /// does not exist.
-    pub fn get_group_mut<'a>(&'a mut self, key: &str) -> Option<PreferencesGroupMut<'a>> {
+    pub fn get_group_mut<'a>(&'a mut self, key: &str) -> Option<JsonPreferencesGroupMut<'a>> {
         let entry = self.json.entry(key.to_owned()).or_insert_with(|| {
             self.changed
                 .store(true, std::sync::atomic::Ordering::Relaxed);
             JsonValue::Object(Map::new())
         });
-        entry.as_object_mut().map(|json| PreferencesGroupMut {
+        entry.as_object_mut().map(|json| JsonPreferencesGroupMut {
             json,
             changed: self.changed,
         })

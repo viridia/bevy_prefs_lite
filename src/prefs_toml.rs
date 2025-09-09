@@ -42,19 +42,19 @@ pub(crate) fn serialize_table(table: &toml::Table) -> String {
 
 /// Represents a single preferences file containing multiple groups of settings.
 #[derive(Debug, Default)]
-pub struct PreferencesFile {
+pub struct TomlPreferencesFile {
     pub(crate) table: toml::Table,
     changed: AtomicBool,
 }
 
-impl PreferencesFile {
+impl TomlPreferencesFile {
     /// Create a new, empty preferences file.
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Create a preferences file from a TOML table.
-    pub fn from_table(table: toml::Table) -> Self {
+    pub(crate) fn from_table(table: toml::Table) -> Self {
         Self {
             table,
             changed: AtomicBool::new(false),
@@ -62,21 +62,21 @@ impl PreferencesFile {
     }
 
     /// Get a preferences group from the file, or `None` if the group does not exist.
-    pub fn get_group(&self, group: &str) -> Option<PreferencesGroup> {
+    pub fn get_group(&self, group: &str) -> Option<TomlPreferencesGroup> {
         self.table
             .get(group)
             .and_then(|v| v.as_table())
-            .map(|table| PreferencesGroup { table })
+            .map(|table| TomlPreferencesGroup { table })
     }
 
     /// Get a mutable reference to a preferences group from the file, creating it if it does not
     /// exist.
-    pub fn get_group_mut<'a>(&'a mut self, group: &str) -> Option<PreferencesGroupMut<'a>> {
+    pub fn get_group_mut<'a>(&'a mut self, group: &str) -> Option<TomlPreferencesGroupMut<'a>> {
         let entry = self
             .table
             .entry(group.to_owned())
             .or_insert_with(|| toml::Value::Table(toml::Table::new()));
-        entry.as_table_mut().map(|table| PreferencesGroupMut {
+        entry.as_table_mut().map(|table| TomlPreferencesGroupMut {
             table,
             changed: &mut self.changed,
         })
@@ -100,16 +100,16 @@ impl PreferencesFile {
     }
 }
 
-pub struct PreferencesGroup<'a> {
+pub struct TomlPreferencesGroup<'a> {
     table: &'a toml::Table,
 }
 
-pub struct PreferencesGroupMut<'a> {
+pub struct TomlPreferencesGroupMut<'a> {
     table: &'a mut toml::Table,
     changed: &'a AtomicBool,
 }
 
-impl PreferencesGroup<'_> {
+impl TomlPreferencesGroup<'_> {
     /// Get a key from the preferences group as a deserializable value, or `None` if the key does
     /// not exist or is not deserializable.
     pub fn get<D>(&self, key: &str) -> Option<D>
@@ -122,15 +122,15 @@ impl PreferencesGroup<'_> {
 
     /// Read a nested preferences group from the group, or `None` if the property does not exist or
     /// is not a table.
-    pub fn get_group(&self, key: &str) -> Option<PreferencesGroup> {
+    pub fn get_group(&self, key: &str) -> Option<TomlPreferencesGroup> {
         self.table
             .get(key)
             .and_then(|v| v.as_table())
-            .map(|table| PreferencesGroup { table })
+            .map(|table| TomlPreferencesGroup { table })
     }
 }
 
-impl PreferencesGroupMut<'_> {
+impl TomlPreferencesGroupMut<'_> {
     /// Delete a key from the preferences group.
     pub fn remove(&mut self, key: &str) {
         if self.table.remove(key).is_some() {
@@ -173,22 +173,22 @@ impl PreferencesGroupMut<'_> {
 
     /// Read a nested preferences group from the group, or `None` if the property does not exist or
     /// is not a table.
-    pub fn get_group(&self, key: &str) -> Option<PreferencesGroup> {
+    pub fn get_group(&self, key: &str) -> Option<TomlPreferencesGroup> {
         self.table
             .get(key)
             .and_then(|v| v.as_table())
-            .map(|table| PreferencesGroup { table })
+            .map(|table| TomlPreferencesGroup { table })
     }
 
     /// Get a mutable reference to a nested preferences group from the group, creating it if it
     /// does not exist.
-    pub fn get_group_mut<'a>(&'a mut self, key: &str) -> Option<PreferencesGroupMut<'a>> {
+    pub fn get_group_mut<'a>(&'a mut self, key: &str) -> Option<TomlPreferencesGroupMut<'a>> {
         let entry = self.table.entry(key.to_owned()).or_insert_with(|| {
             self.changed
                 .store(true, std::sync::atomic::Ordering::Relaxed);
             toml::Value::Table(toml::Table::new())
         });
-        entry.as_table_mut().map(|table| PreferencesGroupMut {
+        entry.as_table_mut().map(|table| TomlPreferencesGroupMut {
             table,
             changed: self.changed,
         })
@@ -215,7 +215,7 @@ mod tests {
         group.insert("key".to_string(), toml::Value::String("value".to_string()));
         table.insert("group".to_string(), toml::Value::Table(group));
 
-        let prefs = PreferencesFile::from_table(table);
+        let prefs = TomlPreferencesFile::from_table(table);
         let group = prefs.get_group("group").unwrap();
         assert_eq!(group.get::<String>("key").unwrap(), "value");
     }
@@ -223,7 +223,7 @@ mod tests {
     #[test]
     fn test_preferences_file_get_group_mut() {
         let table = toml::Table::new();
-        let mut prefs = PreferencesFile::from_table(table);
+        let mut prefs = TomlPreferencesFile::from_table(table);
         {
             let mut group = prefs.get_group_mut("group").unwrap();
             group.set("key", "value");
@@ -236,7 +236,7 @@ mod tests {
     fn test_preferences_group_get_bool() {
         let mut table = toml::Table::new();
         table.insert("key".to_string(), toml::Value::Boolean(true));
-        let group = PreferencesGroup { table: &table };
+        let group = TomlPreferencesGroup { table: &table };
         assert!(group.get::<bool>("key").unwrap());
     }
 
@@ -244,7 +244,7 @@ mod tests {
     fn test_preferences_group_get_string() {
         let mut table = toml::Table::new();
         table.insert("key".to_string(), toml::Value::String("value".to_string()));
-        let group = PreferencesGroup { table: &table };
+        let group = TomlPreferencesGroup { table: &table };
         assert_eq!(group.get::<String>("key").unwrap(), "value");
     }
 
@@ -252,7 +252,7 @@ mod tests {
     fn test_preferences_group_get_integer() {
         let mut table = toml::Table::new();
         table.insert("key".to_string(), toml::Value::Integer(42));
-        let group = PreferencesGroup { table: &table };
+        let group = TomlPreferencesGroup { table: &table };
         assert_eq!(group.get::<i32>("key").unwrap(), 42);
     }
 
@@ -260,7 +260,7 @@ mod tests {
     fn test_preferences_group_get_float() {
         let mut table = toml::Table::new();
         table.insert("key".to_string(), toml::Value::Float(3.1));
-        let group = PreferencesGroup { table: &table };
+        let group = TomlPreferencesGroup { table: &table };
         assert_eq!(group.get::<f32>("key").unwrap(), 3.1);
     }
 
@@ -271,7 +271,7 @@ mod tests {
             "key".to_string(),
             toml::Value::Array(vec![toml::Value::Integer(1), toml::Value::Integer(2)]),
         );
-        let group = PreferencesGroup { table: &table };
+        let group = TomlPreferencesGroup { table: &table };
         assert_eq!(group.get::<IVec2>("key").unwrap(), IVec2::new(1, 2));
     }
 
@@ -282,7 +282,7 @@ mod tests {
             "key".to_string(),
             toml::Value::Array(vec![toml::Value::Integer(1), toml::Value::Integer(2)]),
         );
-        let group = PreferencesGroup { table: &table };
+        let group = TomlPreferencesGroup { table: &table };
         assert_eq!(group.get::<UVec2>("key").unwrap(), UVec2::new(1, 2));
     }
 
@@ -293,7 +293,7 @@ mod tests {
             "key".to_string(),
             toml::Value::Array(vec![toml::Value::Float(1.0), toml::Value::Float(2.0)]),
         );
-        let group = PreferencesGroup { table: &table };
+        let group = TomlPreferencesGroup { table: &table };
         assert_eq!(group.get::<Vec2>("key").unwrap(), Vec2::new(1.0, 2.0));
     }
 
@@ -308,7 +308,7 @@ mod tests {
                 toml::Value::Integer(3),
             ]),
         );
-        let group = PreferencesGroup { table: &table };
+        let group = TomlPreferencesGroup { table: &table };
         assert_eq!(group.get::<IVec3>("key").unwrap(), IVec3::new(1, 2, 3));
     }
 
@@ -323,7 +323,7 @@ mod tests {
                 toml::Value::Integer(3),
             ]),
         );
-        let group = PreferencesGroup { table: &table };
+        let group = TomlPreferencesGroup { table: &table };
         assert_eq!(group.get::<UVec3>("key").unwrap(), UVec3::new(1, 2, 3));
     }
 
@@ -338,7 +338,7 @@ mod tests {
                 toml::Value::Float(3.0),
             ]),
         );
-        let group = PreferencesGroup { table: &table };
+        let group = TomlPreferencesGroup { table: &table };
         assert_eq!(group.get::<Vec3>("key").unwrap(), Vec3::new(1.0, 2.0, 3.0));
     }
 
@@ -346,7 +346,7 @@ mod tests {
     fn test_preferences_group_mut_set_bool() {
         let mut table = toml::Table::new();
         let changed = AtomicBool::new(false);
-        let mut group = PreferencesGroupMut {
+        let mut group = TomlPreferencesGroupMut {
             table: &mut table,
             changed: &changed,
         };
@@ -364,7 +364,7 @@ mod tests {
     fn test_preferences_group_mut_set_string() {
         let mut table = toml::Table::new();
         let changed = AtomicBool::new(false);
-        let mut group = PreferencesGroupMut {
+        let mut group = TomlPreferencesGroupMut {
             table: &mut table,
             changed: &changed,
         };
@@ -377,7 +377,7 @@ mod tests {
     fn test_preferences_group_mut_set_integer() {
         let mut table = toml::Table::new();
         let changed = AtomicBool::new(false);
-        let mut group = PreferencesGroupMut {
+        let mut group = TomlPreferencesGroupMut {
             table: &mut table,
             changed: &changed,
         };
@@ -390,7 +390,7 @@ mod tests {
     fn test_preferences_group_mut_set_float() {
         let mut table = toml::Table::new();
         let changed = AtomicBool::new(false);
-        let mut group = PreferencesGroupMut {
+        let mut group = TomlPreferencesGroupMut {
             table: &mut table,
             changed: &changed,
         };
@@ -403,7 +403,7 @@ mod tests {
     fn test_preferences_group_mut_set_ivec2() {
         let mut table = toml::Table::new();
         let changed = AtomicBool::new(false);
-        let mut group = PreferencesGroupMut {
+        let mut group = TomlPreferencesGroupMut {
             table: &mut table,
             changed: &changed,
         };
@@ -416,7 +416,7 @@ mod tests {
     fn test_preferences_group_mut_set_uvec2() {
         let mut table = toml::Table::new();
         let changed = AtomicBool::new(false);
-        let mut group = PreferencesGroupMut {
+        let mut group = TomlPreferencesGroupMut {
             table: &mut table,
             changed: &changed,
         };
@@ -429,7 +429,7 @@ mod tests {
     fn test_preferences_group_mut_set_vec2() {
         let mut table = toml::Table::new();
         let changed = AtomicBool::new(false);
-        let mut group = PreferencesGroupMut {
+        let mut group = TomlPreferencesGroupMut {
             table: &mut table,
             changed: &changed,
         };
@@ -442,7 +442,7 @@ mod tests {
     fn test_preferences_group_mut_set_ivec3() {
         let mut table = toml::Table::new();
         let changed = AtomicBool::new(false);
-        let mut group = PreferencesGroupMut {
+        let mut group = TomlPreferencesGroupMut {
             table: &mut table,
             changed: &changed,
         };
@@ -455,7 +455,7 @@ mod tests {
     fn test_preferences_group_mut_set_uvec3() {
         let mut table = toml::Table::new();
         let changed = AtomicBool::new(false);
-        let mut group = PreferencesGroupMut {
+        let mut group = TomlPreferencesGroupMut {
             table: &mut table,
             changed: &changed,
         };
@@ -468,7 +468,7 @@ mod tests {
     fn test_preferences_group_mut_set_vec3() {
         let mut table = toml::Table::new();
         let changed = AtomicBool::new(false);
-        let mut group = PreferencesGroupMut {
+        let mut group = TomlPreferencesGroupMut {
             table: &mut table,
             changed: &changed,
         };

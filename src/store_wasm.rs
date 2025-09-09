@@ -1,11 +1,7 @@
-use std::path::PathBuf;
-
 use bevy::{platform_support::collections::HashMap, prelude::*};
+use web_sys::window;
 
-use directories::BaseDirs;
-
-pub use crate::prefs_toml::PreferencesFile;
-use crate::prefs_toml::{load_toml_file, serialize_table};
+pub use crate::prefs_json::PreferencesFile;
 
 /// Resource which represents the place where preferences files are stored. This can be either
 /// a filesystem directory (when working on a desktop platform) or a virtual directory such
@@ -14,13 +10,13 @@ use crate::prefs_toml::{load_toml_file, serialize_table};
 /// You can access individual preferences files using the `.get()` or `.get_mut()` method. These
 /// methods load the preferences into memory if they are not already loaded.
 #[derive(Resource)]
-pub struct Preferences {
-    base_path: Option<PathBuf>,
+pub struct StoreWasm {
+    app_name: String,
     files: HashMap<String, PreferencesFile>,
 }
 
-impl Preferences {
-    /// Construct a new `Preferences` resource.
+impl StoreWasm {
+    /// Construct a new `StoreWasm` resource.
     ///
     /// # Arguments
     /// * `app_name` - The name of the application. This is used to uniquely identify the
@@ -29,24 +25,17 @@ impl Preferences {
     ///   "com.example.myapp".
     ///
     ///   This is only used on desktop platforms. On web platforms, the name is ignored.
-    ///
     pub fn new(app_name: &str) -> Self {
+        // console::log_1("StoreWasm::new");
         Self {
-            base_path: if let Some(base_dirs) = BaseDirs::new() {
-                let prefs_path = base_dirs.preference_dir().join(app_name);
-                info!("Preferences path: {:?}", prefs_path);
-                Some(prefs_path)
-            } else {
-                warn!("Could not find user configuration directories");
-                None
-            },
+            app_name: app_name.to_owned(),
             files: HashMap::default(),
         }
     }
 
     /// Returns true if preferences path is valid.
     pub fn is_valid(&self) -> bool {
-        self.base_path.is_some()
+        window().unwrap().local_storage().is_ok()
     }
 
     /// Save all changed `PreferenceFile`s to disk
@@ -54,31 +43,16 @@ impl Preferences {
     /// # Arguments
     /// * `force` - If true, all preferences will be saved, even if they have not changed.
     pub fn save(&self, force: bool) {
-        if let Some(base_path) = &self.base_path {
-            // Recursively create the preferences directory if it doesn't exist.
-            let mut dir_builder = std::fs::DirBuilder::new();
-            dir_builder.recursive(true);
-            if let Err(e) = dir_builder.create(base_path.clone()) {
-                warn!("Could not create preferences directory: {:?}", e);
-                return;
-            }
-
+        if let Ok(Some(storage)) = window().unwrap().local_storage() {
             for (filename, file) in self.files.iter() {
                 if file.is_changed() || force {
                     info!("Saving preferences file: {}", filename);
                     file.clear_changed();
 
-                    // Save preferences to temp file
-                    let temp_path = base_path.join(format!("{}.toml.new", filename));
-                    if let Err(e) = std::fs::write(&temp_path, serialize_table(&file.table)) {
-                        error!("Error saving preferences file: {}", e);
-                    }
-
-                    // Replace old prefs file with new one.
-                    let file_path = base_path.join(format!("{}.toml", filename));
-                    if let Err(e) = std::fs::rename(&temp_path, file_path) {
-                        warn!("Could not save preferences file: {:?}", e);
-                    }
+                    let json_str = file.encode();
+                    storage
+                        .set_item(&self.storage_key(filename).as_str(), &json_str)
+                        .unwrap();
                 }
             }
         }
@@ -93,21 +67,31 @@ impl Preferences {
     ///
     /// # Arguments
     /// * `filename` - The name of the preferences file, without the file extension.
+    ///
+    /// # Returns
+    /// * `Some(&mut PreferencesFile)` if the file was loaded or created successfully.
+    /// * `None` if the local storage is not available, or there was no data for that key.
+    /// * If the preferences entry exists but could not be decoded, a warning is printed and
+    ///   an empty `PreferencesFile` is returned.
     pub fn get<'a>(&'a mut self, filename: &str) -> Option<&'a mut PreferencesFile> {
-        let Some(base_path) = &self.base_path else {
-            return None;
-        };
+        if let Ok(Some(storage)) = window().unwrap().local_storage() {
+            let storage_key = self.storage_key(filename);
+            if self.files.contains_key(&storage_key) {
+                return self.files.get_mut(&storage_key);
+            }
 
-        if !self.files.contains_key(filename) {
-            let file_path = base_path.join(format!("{}.toml", filename));
-            let table = load_toml_file(&file_path);
-            if let Some(table) = table {
-                self.files
-                    .insert(filename.to_owned(), PreferencesFile::from_table(table));
+            let Ok(Some(json_str)) = storage.get_item(&storage_key) else {
+                return None;
             };
-        }
 
-        self.files.get_mut(filename)
+            self.files.insert(
+                filename.to_owned(),
+                PreferencesFile::from_string(&json_str, filename),
+            );
+            self.files.get_mut(filename)
+        } else {
+            None
+        }
     }
 
     /// Lazily load a preferences file, or create it if it does not exist. If the file is already
@@ -120,23 +104,30 @@ impl Preferences {
     ///
     /// # Arguments
     /// * `filename` - The name of the preferences file, without the file extension.
+    ///
+    /// # Returns
+    /// * `Some(&mut PreferencesFile)` if the file was loaded or created successfully.
+    /// * `None` if the local storage is not available.
+    /// * If the preferences does not exist, or could not be decoded,
+    ///   an empty `PreferencesFile` is returned.
     pub fn get_mut<'a>(&'a mut self, filename: &str) -> Option<&'a mut PreferencesFile> {
-        let Some(base_path) = &self.base_path else {
-            return None;
-        };
-
-        if !self.files.contains_key(filename) {
-            let file_path = base_path.join(format!("{}.toml", filename));
-            let table = load_toml_file(&file_path);
-            let prefs_file = if let Some(table) = table {
-                PreferencesFile::from_table(table)
-            } else {
-                // Create new file
-                PreferencesFile::new()
-            };
-            self.files.insert(filename.to_owned(), prefs_file);
+        if let Ok(Some(storage)) = window().unwrap().local_storage() {
+            let storage_key = self.storage_key(filename);
+            Some(self.files.entry(filename.to_owned()).or_insert_with(|| {
+                if let Ok(Some(json_str)) = storage.get_item(storage_key.as_str()) {
+                    PreferencesFile::from_string(&json_str, filename)
+                } else {
+                    PreferencesFile::default()
+                }
+            }))
+        } else {
+            None
         }
+    }
 
-        self.files.get_mut(filename)
+    /// Returns the storage key for a given filename. This consists of the app name combined
+    /// with the filename.
+    fn storage_key(&self, filename: &str) -> String {
+        format!("{}-{}", self.app_name, filename)
     }
 }

@@ -16,7 +16,7 @@ Preferences typically include things like:
 
 Preferences are _NOT_:
 
-- **Saved games**. The user can have many saved games, wherease typically there is only one set of
+- **Saved games**. The user can have many saved games, whereas typically there is only one set of
   preferences, which is user global. Also, while many games require the user to explicitly perform
   a "save" action, preferences generally are saved automatically.
 - **Assets**. Preferences live in the operating-system-specific folder for user settings,

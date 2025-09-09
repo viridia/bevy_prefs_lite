@@ -1,5 +1,8 @@
-use bevy::prelude::*;
-use bevy_prefs_lite::{AutosavePrefsPlugin, Preferences, StartAutosaveTimer};
+use bevy::{
+    prelude::*,
+    window::{ExitCondition, WindowCloseRequested},
+};
+use bevy_prefs_lite::{AutosavePrefsPlugin, Preferences, SavePreferences, StartAutosaveTimer};
 
 /// Example that remembers window position and size.
 fn main() {
@@ -16,6 +19,7 @@ fn main() {
 
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
+            exit_condition: ExitCondition::DontExit,
             primary_window: Some(Window {
                 title: "Prefs Counter".into(),
                 ..default()
@@ -26,7 +30,7 @@ fn main() {
         .insert_resource(preferences)
         .insert_resource(Counter(count))
         .add_systems(Startup, setup)
-        .add_systems(Update, (show_count, change_count))
+        .add_systems(Update, (show_count, change_count, on_window_close))
         .run();
 }
 
@@ -88,5 +92,20 @@ fn change_count(
             counter_prefs.set("count", counter.0);
             commands.queue(StartAutosaveTimer);
         }
+    }
+}
+
+fn on_window_close(mut close: EventReader<WindowCloseRequested>, mut commands: Commands) {
+    for _close_event in close.read() {
+        commands.queue(SavePreferences::IfChanged);
+        commands.queue(ExitAfterSave);
+    }
+}
+
+struct ExitAfterSave;
+
+impl Command for ExitAfterSave {
+    fn apply(self, world: &mut World) {
+        world.send_event(AppExit::Success);
     }
 }

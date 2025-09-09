@@ -6,8 +6,8 @@ pub use autosave::{AutosavePrefsPlugin, StartAutosaveTimer};
 
 mod prefs;
 
-mod prefs_json;
-mod prefs_toml;
+pub mod prefs_json;
+pub mod prefs_toml;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod store_fs;

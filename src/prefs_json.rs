@@ -12,6 +12,7 @@ pub struct JsonPreferencesFile {
 
 impl JsonPreferencesFile {
     /// Create a preferences file from a JSON table.
+    #[allow(unused)]
     pub(crate) fn from_string(json_str: &str, storage_key: &str) -> Self {
         let Ok(root) = serde_json::from_str::<Map<String, JsonValue>>(json_str) else {
             warn!(
@@ -59,6 +60,7 @@ impl JsonPreferencesFile {
         self.changed.store(false, Ordering::Relaxed);
     }
 
+    #[allow(unused)]
     pub(crate) fn encode(&self) -> String {
         serde_json::to_string(&self.root).unwrap()
     }

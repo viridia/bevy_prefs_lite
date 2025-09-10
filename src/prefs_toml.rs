@@ -98,7 +98,16 @@ impl TomlPreferencesFile {
     pub fn is_changed(&self) -> bool {
         self.changed.load(std::sync::atomic::Ordering::Relaxed)
     }
+
+    /// Return a cloned copy of the content, for async saving.
+    pub fn content(&self) -> TomlPreferencesFileContent {
+        TomlPreferencesFileContent(self.table.clone())
+    }
 }
+
+/// Cloned contents of a [`PreferencesFile`]
+#[derive(Debug, Default, Clone)]
+pub struct TomlPreferencesFileContent(#[allow(unused)] pub(crate) toml::Table);
 
 pub struct TomlPreferencesGroup<'a> {
     table: &'a toml::Table,

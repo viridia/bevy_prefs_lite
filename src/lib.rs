@@ -19,7 +19,7 @@ mod store_wasm;
 pub use store_fs::StoreFs;
 
 #[cfg(target_arch = "wasm32")]
-pub use prefs_wasm::Preferences;
+pub use store_wasm::StoreWasm;
 
 pub use crate::prefs::Preferences;
 
@@ -28,6 +28,7 @@ mod format {
     use crate::prefs_json;
 
     pub type PreferencesFile = prefs_json::JsonPreferencesFile;
+    pub type PreferencesFileContent = prefs_json::JsonPreferencesFileContent;
     pub type PreferencesGroup<'a> = prefs_json::JsonPreferencesGroup<'a>;
     pub type PreferencesGroupMut<'a> = prefs_json::JsonPreferencesGroupMut<'a>;
 }
@@ -37,13 +38,32 @@ mod format {
     use crate::prefs_toml;
 
     pub type PreferencesFile = prefs_toml::TomlPreferencesFile;
+    pub type PreferencesFileContent = prefs_toml::TomlPreferencesFileContent;
     pub type PreferencesGroup<'a> = prefs_toml::TomlPreferencesGroup<'a>;
     pub type PreferencesGroupMut<'a> = prefs_toml::TomlPreferencesGroupMut<'a>;
 }
 
 pub use self::format::*;
 
-/// A Command which saves preferences to disk.
+/// A Command which saves preferences to disk. This blocks the command queue until saving
+/// is complete.
+#[derive(Default, PartialEq)]
+pub enum SavePreferencesSync {
+    /// Save preferences only if they have changed (based on [`PreferencesChanged` resource]).
+    #[default]
+    IfChanged,
+    /// Save preferences unconditionally.
+    Always,
+}
+
+impl Command for SavePreferencesSync {
+    fn apply(self, world: &mut World) {
+        let prefs = world.get_resource::<Preferences>().unwrap();
+        prefs.save(self == SavePreferencesSync::Always);
+    }
+}
+
+/// A Command which saves preferences to disk. Actual FS operations happen in another thread.
 #[derive(Default, PartialEq)]
 pub enum SavePreferences {
     /// Save preferences only if they have changed (based on [`PreferencesChanged` resource]).
@@ -56,6 +76,6 @@ pub enum SavePreferences {
 impl Command for SavePreferences {
     fn apply(self, world: &mut World) {
         let prefs = world.get_resource::<Preferences>().unwrap();
-        prefs.save(self == SavePreferences::Always);
+        prefs.save_async(self == SavePreferences::Always);
     }
 }

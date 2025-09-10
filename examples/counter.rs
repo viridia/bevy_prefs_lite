@@ -2,7 +2,7 @@ use bevy::{
     prelude::*,
     window::{ExitCondition, WindowCloseRequested},
 };
-use bevy_prefs_lite::{AutosavePrefsPlugin, Preferences, SavePreferences, StartAutosaveTimer};
+use bevy_prefs_lite::{AutosavePrefsPlugin, Preferences, SavePreferencesSync, StartAutosaveTimer};
 
 /// Example that remembers window position and size.
 fn main() {
@@ -97,7 +97,7 @@ fn change_count(
 
 fn on_window_close(mut close: EventReader<WindowCloseRequested>, mut commands: Commands) {
     for _close_event in close.read() {
-        commands.queue(SavePreferences::IfChanged);
+        commands.queue(SavePreferencesSync::IfChanged);
         commands.queue(ExitAfterSave);
     }
 }

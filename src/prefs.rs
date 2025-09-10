@@ -1,7 +1,12 @@
 use bevy::{platform_support::collections::HashMap, prelude::*};
 
-pub use crate::PreferencesFile;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::StoreFs;
+
+#[cfg(target_arch = "wasm32")]
+use crate::StoreWasm;
+
+pub use crate::{PreferencesFile, PreferencesFileContent};
 
 // TODO: Think about potential Results:
 // NoFile
@@ -27,6 +32,13 @@ pub trait PreferencesStore {
     /// * `filename` - the filename of the [`PreferencesFile`].
     /// * `file` - the contents of the file.
     fn save(&self, filename: &str, file: &PreferencesFile);
+
+    /// Save a [`PreferencesFile`] to the store in another thread.
+    ///
+    /// # Arguments
+    /// * `filename` - the filename of the [`PreferencesFile`].
+    /// * `file` - the contents of the file.
+    fn save_async(&self, filename: &str, file: PreferencesFileContent);
 }
 
 /// Resource which represents the place where preferences files are stored. This can be either
@@ -56,6 +68,8 @@ impl Preferences {
         Self {
             #[cfg(not(target_arch = "wasm32"))]
             store: Box::new(StoreFs::new(app_name)),
+            #[cfg(target_arch = "wasm32")]
+            store: Box::new(StoreWasm::new(app_name)),
             files: HashMap::default(),
         }
     }
@@ -75,6 +89,20 @@ impl Preferences {
                 info!("Saving preferences file: {}", filename);
                 file.clear_changed();
                 self.store.save(filename, file);
+            }
+        }
+    }
+
+    /// Save all changed `PreferenceFile`s to disk, in another thread.
+    ///
+    /// # Arguments
+    /// * `force` - If true, all preferences will be saved, even if they have not changed.
+    pub fn save_async(&self, force: bool) {
+        for (filename, file) in self.files.iter() {
+            if file.is_changed() || force {
+                info!("Saving preferences file (async): {}", filename);
+                file.clear_changed();
+                self.store.save_async(filename, file.content());
             }
         }
     }

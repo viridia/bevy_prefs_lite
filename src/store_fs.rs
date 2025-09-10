@@ -1,13 +1,13 @@
 use std::path::PathBuf;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, tasks::IoTaskPool};
 
 use directories::BaseDirs;
 
 use crate::{
     prefs::PreferencesStore,
     prefs_toml::{load_toml_file, serialize_table},
-    PreferencesFile,
+    PreferencesFile, PreferencesFileContent,
 };
 
 /// PreferencesStore which uses the local filesystem. Preferences will be located in the
@@ -51,8 +51,9 @@ impl PreferencesStore for StoreFs {
     /// Save all changed `PreferenceFile`s to disk
     ///
     /// # Arguments
-    /// * `force` - If true, all preferences will be saved, even if they have not changed.
-    fn save(&self, filename: &str, file: &PreferencesFile) {
+    /// * `filename` - the name of the file to be saved
+    /// * `contents` - the contents of the file
+    fn save(&self, filename: &str, contents: &PreferencesFile) {
         if let Some(base_path) = &self.base_path {
             // Recursively create the preferences directory if it doesn't exist.
             let mut dir_builder = std::fs::DirBuilder::new();
@@ -64,7 +65,7 @@ impl PreferencesStore for StoreFs {
 
             // Save preferences to temp file
             let temp_path = base_path.join(format!("{filename}.toml.new"));
-            if let Err(e) = std::fs::write(&temp_path, serialize_table(&file.table)) {
+            if let Err(e) = std::fs::write(&temp_path, serialize_table(&contents.table)) {
                 error!("Error saving preferences file: {}", e);
             }
 
@@ -73,6 +74,39 @@ impl PreferencesStore for StoreFs {
             if let Err(e) = std::fs::rename(&temp_path, file_path) {
                 warn!("Could not save preferences file: {:?}", e);
             }
+        }
+    }
+
+    /// Save all changed `PreferenceFile`s to disk in another thread.
+    ///
+    /// # Arguments
+    /// * `filename` - the name of the file to be saved
+    /// * `contents` - the contents of the file
+    fn save_async(&self, filename: &str, contents: PreferencesFileContent) {
+        if let Some(base_path) = &self.base_path {
+            IoTaskPool::get().scope(|scope| {
+                scope.spawn(async {
+                    // Recursively create the preferences directory if it doesn't exist.
+                    let mut dir_builder = std::fs::DirBuilder::new();
+                    dir_builder.recursive(true);
+                    if let Err(e) = dir_builder.create(base_path.clone()) {
+                        warn!("Could not create preferences directory: {:?}", e);
+                        return;
+                    }
+
+                    // Save preferences to temp file
+                    let temp_path = base_path.join(format!("{filename}.toml.new"));
+                    if let Err(e) = std::fs::write(&temp_path, serialize_table(&contents.0)) {
+                        error!("Error saving preferences file: {}", e);
+                    }
+
+                    // Replace old prefs file with new one.
+                    let file_path = base_path.join(format!("{filename}.toml"));
+                    if let Err(e) = std::fs::rename(&temp_path, file_path) {
+                        warn!("Could not save preferences file: {:?}", e);
+                    }
+                });
+            });
         }
     }
 

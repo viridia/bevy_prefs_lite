@@ -11,6 +11,11 @@ pub struct JsonPreferencesFile {
 }
 
 impl JsonPreferencesFile {
+    /// Create a new, empty preferences file.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     /// Create a preferences file from a JSON table.
     #[allow(unused)]
     pub(crate) fn from_string(json_str: &str, storage_key: &str) -> Self {
@@ -63,6 +68,22 @@ impl JsonPreferencesFile {
     #[allow(unused)]
     pub(crate) fn encode(&self) -> String {
         serde_json::to_string(&self.root).unwrap()
+    }
+
+    /// Return a cloned copy of the content, for async saving.
+    pub fn content(&self) -> JsonPreferencesFileContent {
+        JsonPreferencesFileContent(self.root.clone())
+    }
+}
+
+/// Cloned contents of a [`PreferencesFile`]
+#[derive(Debug, Default, Clone)]
+pub struct JsonPreferencesFileContent(#[allow(unused)] pub(crate) Map<String, JsonValue>);
+
+impl JsonPreferencesFileContent {
+    #[allow(unused)]
+    pub(crate) fn encode(&self) -> String {
+        serde_json::to_string(&self.0).unwrap()
     }
 }
 

@@ -162,6 +162,10 @@ commands.queue(SavePreferences::IfChanged);
 This will cause any preference files to be saved if they are marked as changed. It's up to you
 to decide when to save preferences, but they should be saved before the app exits.
 
+To avoid causing frame delays, the `SavePreferences` command spawns a thread to perform the
+filesystem operations. Alternatively, you can use `SavePreferencesSync` which does the same thing,
+but on the main thread. Or you can just call `.save()` on the `PreferencesStore` object.
+
 ### Autosaving
 
 The `AutosavePrefsPlugin` implements a timer which can be used to save preferences. Once you

@@ -1,6 +1,6 @@
 use std::{fs, path::PathBuf, sync::atomic::AtomicBool};
 
-use bevy::prelude::*;
+use bevy::log::error;
 use serde::{de::DeserializeOwned, Serialize};
 
 /// Load a preferences file from disk in TOML format.
@@ -206,6 +206,8 @@ impl TomlPreferencesGroupMut<'_> {
 
 #[cfg(test)]
 mod tests {
+    use bevy::math::{IVec2, IVec3, UVec2, UVec3, Vec2, Vec3};
+
     use super::*;
 
     #[test]

@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 
-use bevy::{prelude::*, tasks::IoTaskPool};
+use bevy::{
+    log::{error, info, warn},
+    tasks::IoTaskPool,
+};
 
 use directories::BaseDirs;
 

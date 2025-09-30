@@ -1,4 +1,4 @@
-use bevy::{platform::collections::HashMap, prelude::*};
+use bevy::{ecs::resource::Resource, log::info, platform::collections::HashMap};
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::StoreFs;

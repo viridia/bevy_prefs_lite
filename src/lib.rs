@@ -1,5 +1,3 @@
-use bevy::prelude::*;
-
 mod autosave;
 
 pub use autosave::{AutosavePrefsPlugin, StartAutosaveTimer};
@@ -15,6 +13,7 @@ mod store_fs;
 #[cfg(target_arch = "wasm32")]
 mod store_wasm;
 
+use bevy::ecs::{system::Command, world::World};
 #[cfg(not(target_arch = "wasm32"))]
 pub use store_fs::StoreFs;
 

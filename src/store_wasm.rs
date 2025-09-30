@@ -1,5 +1,5 @@
 pub use crate::{prefs::PreferencesStore, PreferencesFile, PreferencesFileContent};
-use bevy::{prelude::*, tasks::IoTaskPool};
+use bevy::tasks::IoTaskPool;
 use web_sys::window;
 
 /// Resource which represents the place where preferences files are stored. This can be either

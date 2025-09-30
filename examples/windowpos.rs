@@ -1,6 +1,6 @@
 use bevy::{
     prelude::*,
-    window::{PrimaryWindow, WindowMode, WindowResized},
+    window::{PrimaryWindow, WindowMode, WindowResized, WindowResolution},
 };
 use bevy_prefs_lite::{AutosavePrefsPlugin, Preferences, PreferencesFile, StartAutosaveTimer};
 
@@ -31,18 +31,17 @@ fn main() {
 
 fn setup(mut commands: Commands) {
     commands.spawn((Camera::default(), Camera2d));
-    // commands.spawn(OrthographicCameraBundle::new_2d());
 }
 
 /// System which keeps the window settings up to date when the user resizes or moves the window.
 pub fn update_window_settings(
-    mut move_events: EventReader<WindowMoved>,
-    mut resize_events: EventReader<WindowResized>,
+    mut move_events: MessageReader<WindowMoved>,
+    mut resize_events: MessageReader<WindowResized>,
     windows: Query<&mut Window, With<PrimaryWindow>>,
     mut preferences: ResMut<Preferences>,
     mut commands: Commands,
 ) {
-    let Ok(window) = windows.get_single() else {
+    let Ok(window) = windows.single() else {
         return;
     };
 
@@ -67,7 +66,7 @@ fn load_window_settings(prefs: &mut Preferences, window: &mut Window) {
         if let Some(window_prefs) = app_prefs.get_group("window") {
             if let Some(fullscreen) = window_prefs.get::<bool>("fullscreen") {
                 window.mode = if fullscreen {
-                    WindowMode::SizedFullscreen(MonitorSelection::Current)
+                    WindowMode::BorderlessFullscreen(MonitorSelection::Current)
                 } else {
                     WindowMode::Windowed
                 };
@@ -75,8 +74,8 @@ fn load_window_settings(prefs: &mut Preferences, window: &mut Window) {
             if let Some(pos) = window_prefs.get::<IVec2>("position") {
                 window.position = WindowPosition::new(pos);
             }
-            if let Some(size) = window_prefs.get::<Vec2>("size") {
-                window.resolution = (size.x, size.y).into();
+            if let Some(size) = window_prefs.get::<UVec2>("size") {
+                window.resolution = WindowResolution::new(size.x, size.y);
             }
         }
     }
@@ -105,7 +104,10 @@ fn store_window_settings(
     // Window size
     window_prefs.set_if_changed(
         "size",
-        Vec2::new(window.resolution.width(), window.resolution.height()),
+        UVec2::new(
+            window.resolution.width() as u32,
+            window.resolution.height() as u32,
+        ),
     );
 
     commands.queue(StartAutosaveTimer);

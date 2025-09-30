@@ -95,7 +95,7 @@ fn change_count(
     }
 }
 
-fn on_window_close(mut close: EventReader<WindowCloseRequested>, mut commands: Commands) {
+fn on_window_close(mut close: MessageReader<WindowCloseRequested>, mut commands: Commands) {
     for _close_event in close.read() {
         commands.queue(SavePreferencesSync::IfChanged);
         commands.queue(ExitAfterSave);
@@ -106,6 +106,6 @@ struct ExitAfterSave;
 
 impl Command for ExitAfterSave {
     fn apply(self, world: &mut World) {
-        world.send_event(AppExit::Success);
+        world.write_message(AppExit::Success);
     }
 }
